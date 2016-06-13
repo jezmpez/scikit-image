@@ -14,10 +14,10 @@ from ..util import img_as_float
 
 def _felzenszwalb_rgb(image, double scale=1, sigma=0.8,
                        Py_ssize_t min_size=20):
-    """Felzenszwalb's efficient graph based segmentation for multiple channels.
+    """Felzenszwalb's efficient graph based segmentation for single or multiple channels.
 
-    Produces an oversegmentation of a multi-channel image using a fast, minimum spanning
-    tree based clustering on the image grid.
+    Produces an oversegmentation of a single or multi-channel image using a 
+    fast, minimum spanning tree based clustering on the image grid.
     The number of produced segments as well as their size can only be
     controlled indirectly through ``scale``. Segment size within an image can
     vary greatly depending on local contrast.
@@ -40,7 +40,7 @@ def _felzenszwalb_rgb(image, double scale=1, sigma=0.8,
         Integer mask indicating segment labels.
     """
     if image.ndim != 3:
-        raise ValueError("This algorithm works only on multi-channel 3d"
+        raise ValueError("This algorithm works only on single or multi-channel 3d"
                 "images. Got image of shape %s" % str(image.shape))
 
     image = img_as_float(image)
@@ -50,10 +50,14 @@ def _felzenszwalb_rgb(image, double scale=1, sigma=0.8,
     image = ndi.gaussian_filter(image, sigma=[sigma, sigma, 0])
 
     # compute edge weights in 8 connectivity:
-    right_cost = np.sqrt(np.sum((image[1:, :,:] - image[:-1, :,:])*(image[1:, :,:] - image[:-1, :,:]), axis=-1))
-    down_cost = np.sqrt(np.sum((image[:, 1:,:] - image[:, :-1,:])*(image[:, 1:,:] - image[:, :-1,:]), axis=-1))
-    dright_cost = np.sqrt(np.sum((image[1:, 1:,:] - image[:-1, :-1,:])*(image[1:, 1:,:] - image[:-1, :-1,:]), axis=-1))
-    uright_cost = np.sqrt(np.sum((image[1:, :-1,:] - image[:-1, 1:,:])*(image[1:, :-1,:] - image[:-1, 1:,:]), axis=-1))
+    right_cost = np.sqrt(np.sum((image[1:, :, :] - image[:-1, :, :])
+        *(image[1:, :, :] - image[:-1, :, :]), axis=-1))
+    down_cost = np.sqrt(np.sum((image[:, 1:, :] - image[:, :-1, :])
+        *(image[:, 1:,:] - image[:, :-1, :]), axis=-1))
+    dright_cost = np.sqrt(np.sum((image[1:, 1:, :] - image[:-1, :-1, :])
+        *(image[1:, 1:, :] - image[:-1, :-1, :]), axis=-1))
+    uright_cost = np.sqrt(np.sum((image[1:, :-1, :] - image[:-1, 1:, :])
+        *(image[1:, :-1, :] - image[:-1, 1:, :]), axis=-1))
     cdef cnp.ndarray[cnp.float_t, ndim=1] costs = np.hstack([right_cost.ravel(),
         down_cost.ravel(), dright_cost.ravel(),
         uright_cost.ravel()]).astype(np.float)
